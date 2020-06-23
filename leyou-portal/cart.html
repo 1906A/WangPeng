@@ -48,7 +48,7 @@
                                 </li>
                                 <li class="yui3-u-11-24">
                                     <div class="good-item">
-                                        <div class="item-img"><img :src="cart.image" width="80px" height="80px"/></div>
+                                        <div class="item-img"><img :src="cart.images" width="80px" height="80px"/></div>
                                         <div class="item-msg">
 												<span style="line-height:70px ">
 													{{cart.title}}
@@ -65,7 +65,7 @@
                                 </li>
                                 <li class="yui3-u-1-8"><span style="line-height:70px " class="sum">{{ly.formatPrice(cart.price*cart.num)}}</span></li>
                                 <li class="yui3-u-1-8">
-                                    <a href="#none" @click="deleteCart(i)">删除</a><br />
+                                    <a href="#none" @click="deleteCart(cart,i)">删除</a><br />
                                     <a href="#none">移到我的关注</a>
                                 </li>
                             </ul>
@@ -91,7 +91,7 @@
                         <span><em>已节省：</em><i>-¥20.00</i></span>
                     </div>
                     <div class="sumbtn">
-                        <a class="sum-btn"  href="getOrderInfo.html"  target="_blank">结算</a>
+                        <a class="sum-btn" @click="toPay">结算</a>
                     </div>
                 </div>
             </div>
@@ -280,18 +280,41 @@
                         this.carts=ly.store.get("carts");
                         this.selected = this.carts;
                     }else{
-                        alert("一登陆")
+                        this.ly.http.post("/cart/query").then(resp =>{
+                            console.info(resp.data);
+                            this.carts = resp.data;
+                            this.selected = this.carts;
+                        })
                     }
                 })
 
         },
         methods:{
-            deleteCart(i){
+            toPay(){
+                //判断用户是否登录
+                this.ly.http("/auth/verify")
+                    .then(resp => {
+                        this.user = resp.data; //对象为空未登陆  1：对象有值已登录
+                        if(this.user.id==null){
+                            //未登录
+                            location.href="http://www.leyou.com/login.html?returnUrl="+location.href;
+                        }else{
+                            //一登陆 把选择的商品放到本地localstorge
+                            ly.store.set("js_selected",this.selected)
+                            window.open("http://www.leyou.com/getOrderInfo.html",target="_blank")
+                        }
+                    })
+            },
+            deleteCart(cart,i){
                 this.ly.http("/auth/verify")
                     .then(resp => {
                         let user = resp.data;
                         if(user.id!=null){
-                            alert("登录了")
+                           //alert("登录了")
+                            let id=cart.id;
+                            this.ly.http.post("/cart/delete?id="+id).then(resp =>{
+                                window.location.reload();
+                            })
                         }else{
                             this.carts.splice(i,1);
                             ly.store.set("carts",this.carts)
@@ -322,7 +345,11 @@
                     .then(resp => {
                         let user = resp.data;
                         if(user.id!=null){
-                            alert("登录了")
+                            //alert("登录了")
+                            //刷新后台redis
+                            this.ly.http.post("/cart/update",cart).then(resp =>{
+
+                            })
                         }else{
                             ly.store.set("carts",this.carts)
                         }
@@ -341,6 +368,10 @@
                     .then(resp => {
                         let user = resp.data;
                         if(user.id!=null){
+                            //刷新后台redis
+                            this.ly.http.post("/cart/update",cart).then(resp =>{
+
+                            })
                         }else{
                             ly.store.set("carts",this.carts)
                         }

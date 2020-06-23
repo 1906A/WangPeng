@@ -44,7 +44,7 @@ $(function(){
             <h3><i class="sui-icon icon-pc-right"></i>商品已成功加入购物车！</h3>
             <div class="goods">
                 <div class="left-good">
-                    <div class="left-pic"><img :src="selectedSku.image"></div>
+                    <div class="left-pic"><img :src="selectedSku.images"></div>
                     <div class="right-info">
                         <p class="title">{{selectedSku.title}}</p>
                         <p class="attr">颜色：{{ownSpec}} 数量：{{selectedSku.num}}</p>
@@ -616,12 +616,32 @@ $(function(){
         },
         methods:{
 
+
         },
         created() {
-            //获取selectedSku
-          this.selectedSku=  ly.store.get("selectedSku");
 
-          this.ownSpec= Object.values(JSON.parse(this.selectedSku.ownSpec)).join("/");
+            this.ly.http("/auth/verify")
+                .then(resp => {
+                    this.user = resp.data; //对象为空未登陆  1：对象有值已登录
+                    if(this.user.id==null){
+
+                        //获取selectedSku
+                        this.selectedSku=  ly.store.get("selectedSku");
+
+                        this.ownSpec= Object.values(JSON.parse(this.selectedSku.ownSpec)).join("/");
+
+                    }else{
+                        alert("已登陆");
+
+                        this.ly.http.post("/cart/selectedSku").then(resp =>{
+                            console.info(resp.data);
+                            this.selectedSku = resp.data;
+                            this.ownSpec = Object.values(JSON.parse(this.selectedSku.ownSpec)).join("/")
+                            alert("添加购物车成功");
+                        })
+                    }
+                })
+
 
         }
     });
